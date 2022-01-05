@@ -96,6 +96,13 @@ func parseWriters(config Config) []Writer {
 			if err == nil {
 				writers = append(writers, writer)
 			}
+		case "kafka":
+			fmt.Println("Parsing kafka output")
+			var writer KafkaOutput
+			err = yaml.Unmarshal(configYaml, &writer)
+			if err == nil {
+				writers = append(writers, writer)
+			}
 		default:
 			log.Fatal("Could not parse kind", output.Kind)
 		}
