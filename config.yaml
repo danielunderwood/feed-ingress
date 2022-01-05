@@ -14,7 +14,8 @@ outputs:
     config:
       broker: "127.0.0.1:9092"
       topic: feeds
-
+redis:
+  host: 127.0.0.1:6379
 feeds:
 
   - "https://techcrunch.com/feed/"

@@ -12,6 +12,8 @@ import (
 	"github.com/mmcdole/gofeed"
 
 	"gopkg.in/yaml.v2"
+
+	redisbloom "github.com/RedisBloom/redisbloom-go"
 )
 
 type Feed string
@@ -26,9 +28,14 @@ type Output struct {
 	Config map[string]string
 }
 
+type RedisConfig struct {
+	Host string
+}
+
 type Config struct {
 	Feeds   []Feed
 	Outputs []Output
+	Redis   RedisConfig
 }
 
 func loadConfig() Config {
@@ -45,6 +52,8 @@ func loadConfig() Config {
 	return config
 }
 
+const BLOOM_FILTER_NAME = "items-exist"
+
 func main() {
 	config := loadConfig()
 	fmt.Println("Config loaded:", config)
@@ -54,19 +63,16 @@ func main() {
 	// fmt.Println("Parsing from", string(configYaml))
 	writers := parseWriters(config)
 
+	redisClient := redisbloom.NewClient(config.Redis.Host, "nohelp", nil)
+
 	for _, writer := range writers {
 		fmt.Printf("%#v\n", writer)
 	}
 
-	// This could be a set, but it looks like go doesn't have a native set type, so might as well
-	// store the processed time
-	// Really, we could use redis to avoid everything getting reset on a restart (or we could just dump
-	//  the map to a file)
-	processed := make(map[[32]byte]time.Time)
 	for {
 		// TODO Each one should be its own goroutine
 		for _, feed := range config.Feeds {
-			processFeed(feed, processed, writers)
+			processFeed(feed, redisClient, writers)
 		}
 		time.Sleep(1 * time.Minute)
 	}
@@ -111,28 +117,30 @@ func parseWriters(config Config) []Writer {
 			log.Fatal("Failed to provider output", output)
 		}
 	}
+	fmt.Println(writers)
 	return writers
 }
 
-func processFeed(feed Feed, processed map[[32]byte]time.Time, writers []Writer) {
+func processFeed(feed Feed, redisClient *redisbloom.Client, writers []Writer) {
 	fp := gofeed.NewParser()
 	fmt.Println("Processing feed", feed)
 	parsed, _ := fp.ParseURL(string(feed))
 	for _, item := range parsed.Items {
 		// TODO This should probably be in a goroutine, but we need to use channels and such
-		processItem(parsed, *item, processed, writers)
+		processItem(parsed, *item, redisClient, writers)
 	}
 }
 
-func processItem(feed *gofeed.Feed, item gofeed.Item, processed map[[32]byte]time.Time, writers []Writer) {
+func processItem(feed *gofeed.Feed, item gofeed.Item, redisClient *redisbloom.Client, writers []Writer) {
 	// Hash the GUID to make a uniform format
 	// We could also base64 it so it's reversible, but then the filenames may not be the same length
 	identifier := blake2b.Sum256([]byte(item.GUID))
-	if _, exists := processed[identifier]; exists {
+	identifierStr := fmt.Sprintf("%x", identifier)
+	if exists, _ := redisClient.Exists(BLOOM_FILTER_NAME, identifierStr); exists {
 		fmt.Printf("Already processed %x\n", identifier)
 		return
 	} else {
-		processed[identifier] = time.Now().UTC()
+		redisClient.Add(BLOOM_FILTER_NAME, identifierStr)
 	}
 
 	for _, writer := range writers {
@@ -141,7 +149,7 @@ func processItem(feed *gofeed.Feed, item gofeed.Item, processed map[[32]byte]tim
 		// Really it would be safer to have workers and channels
 		go func(writer Writer) {
 			fmt.Printf("Writing with %T\n", writer)
-			if err := writer.Write(feed, item, fmt.Sprintf("%x", identifier)); err != nil {
+			if err := writer.Write(feed, item, identifierStr); err != nil {
 				fmt.Println("Error writing with", writer, err)
 			}
 		}(writer)
