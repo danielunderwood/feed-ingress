@@ -1,23 +1,15 @@
 package main
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
 	"log"
 	"os"
 	"strings"
-	"text/template"
 	"time"
 
 	"golang.org/x/crypto/blake2b"
 
 	"github.com/mmcdole/gofeed"
-
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/s3"
 
 	"gopkg.in/yaml.v2"
 )
@@ -32,107 +24,6 @@ type Output struct {
 	Kind string
 	// TODO Not sure how, but maybe this can be specialized on kind
 	Config map[string]string
-}
-
-type S3Output struct {
-	Endpoint     string
-	Region       string
-	AccessKeyId  string
-	AccessSecret string
-	Bucket       string
-	KeyFormat    string
-}
-
-func (out S3Output) Write(feed *gofeed.Feed, item gofeed.Item, identifier string) error {
-	// https://help.backblaze.com/hc/en-us/articles/360047629713-Using-the-AWS-Go-SDK-with-B2
-	// Yes, it is awful
-	// Also, for actual AWS, you may have things like IAM for auth
-	bucket := aws.String(out.Bucket)
-
-	s3Config := &aws.Config{
-		Credentials:      credentials.NewStaticCredentials(out.AccessKeyId, out.AccessSecret, ""),
-		Endpoint:         aws.String(out.Endpoint),
-		Region:           aws.String(out.Region),
-		S3ForcePathStyle: aws.Bool(true),
-	}
-	newSession := session.New(s3Config)
-	s3Client := s3.New(newSession)
-
-	data, err := json.Marshal(item)
-
-	// TODO This should probably go in initialization
-	pathTemplate, err := template.New(out.KeyFormat).Parse(out.KeyFormat)
-	if err != nil {
-		return err
-	}
-	var buffer bytes.Buffer
-	err = pathTemplate.Execute(&buffer, item)
-	if err != nil {
-		return err
-	}
-	keyPrefix := buffer.String()
-	key := fmt.Sprintf("%s/%s-%s.json", keyPrefix, feed.Title, identifier)
-	_, err = s3Client.PutObject(&s3.PutObjectInput{
-		Body:   bytes.NewReader(data),
-		Bucket: bucket,
-		Key:    &key,
-	})
-	if err != nil {
-		fmt.Printf("Failed to upload object %s/%s, %s\n", *bucket, key, err.Error())
-		return err
-	} else {
-		fmt.Printf("Successfully uploaded key %s\n", key)
-	}
-	return nil
-}
-
-type FileOutput struct {
-	PathFormat string
-}
-
-func (out FileOutput) Write(feed *gofeed.Feed, item gofeed.Item, identifier string) error {
-	// TODO This should probably go in initialization
-	pathTemplate, err := template.New(out.PathFormat).Parse(out.PathFormat)
-	if err != nil {
-		return err
-	}
-	var buffer bytes.Buffer
-	err = pathTemplate.Execute(&buffer, item)
-	if err != nil {
-		return err
-	}
-	path := buffer.String()
-
-	err = os.MkdirAll(path, 0o0750)
-	if err != nil {
-		fmt.Println("ERROR: Could not create ", path, err)
-		return err
-	}
-
-	// Prefix for data files to identify their source. We should probably be careful to make sure this
-	// is something that's reasonable to create a file with, but whatever
-	prefix := feed.Title
-	file := fmt.Sprintf("%s/%s-%s.json", path, prefix, identifier)
-	fmt.Println("Saving to ", file)
-	data, err := json.Marshal(item)
-	// TODO gzip these files. It shouldn't be too difficult, but the API is a bit weird
-	// var compressedWriter
-	// writer := gzip.NewWriter(compressedWriter)
-	// defer writer.Close()
-	// defer compressedWriter.Close()
-	// writer.Write(data)
-	// writer.Flush()
-	// compressedData := compressedWriter.
-	if err != nil {
-		fmt.Println("ERROR: Could not marshal", item)
-		return err
-	}
-	err = os.WriteFile(file, data, 0o0640)
-	if err != nil {
-		fmt.Println("ERROR: Failed to write", string(data))
-		return err
-	}
-	return nil
 }
 
 type Config struct {
