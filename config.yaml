@@ -1,0 +1,17 @@
+outputs:
+  - kind: s3
+    config:
+      endpoint: https://s3.us-west-002.backblazeb2.com
+      region: us-west-002
+      accesskeyid: 
+      accesssecret: 
+      bucket: 
+      keyformat: "{{ .PublishedParsed.UTC.Year }}/{{ .PublishedParsed.UTC.Month }}/{{ .PublishedParsed.UTC.Day }}"
+  - kind: file
+    config:
+      pathformat: "./data/{{ .PublishedParsed.UTC.Year }}/{{ .PublishedParsed.UTC.Month }}/{{ .PublishedParsed.UTC.Day }}"
+
+feeds:
+
+  - "https://techcrunch.com/feed/"
+  - https://feeds.feedburner.com/TheHackersNews?format=xml
