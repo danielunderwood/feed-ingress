@@ -1,7 +1,8 @@
 with (import <nixpkgs> {});
 mkShell {
   buildInputs = [
-    go
+    go_1_17
+    go-tools
     docker-compose
     kcat
   ];
