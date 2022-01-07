@@ -28,10 +28,32 @@ $ $EDITOR config.yaml
 $ docker run --name feed-ingress -v ./config.yaml:/app/config.yaml:ro ghcr.io/danielunderwood/feed-ingress
 ```
 
+## Configuration
 
-## Outputs
+### Feeds
 
-### Local Files
+Feeds are a simple list of URLs in the config file:
+
+```yaml
+feeds:
+  - https://example.com/rss.xml
+  - https://example-2.com/feed.xml
+```
+
+These URLs are parsed by [gofeed's universal parser](https://github.com/mmcdole/gofeed#universal-feed-parser-1) with the hope of handling most things thrown at it.
+
+### Redis
+
+[redisbloom](https://oss.redis.com/redisbloom/) is currently used for deduplication of feed items. At the moment, it only supports the configuration of a host:
+
+```yaml
+redis:
+  host: redis:6379
+```
+
+### Outputs
+
+#### Local Files
 
 `kind: file` will store to local JSON files based on the path format (note that the file name itself currently has a hardcoded format):
 
@@ -41,7 +63,7 @@ $ docker run --name feed-ingress -v ./config.yaml:/app/config.yaml:ro ghcr.io/da
       pathformat: "./data/{{ .PublishedParsed.UTC.Year }}/{{ .PublishedParsed.UTC.Month }}/{{ .PublishedParsed.UTC.Day }}"
 ```
 
-### S3-Compatible Storage
+#### S3-Compatible Storage
 
 The `kind: s3` will work with any S3-compatible storage, such as AWS S3, Backblaze B2, or MinIO:
 
@@ -56,7 +78,7 @@ The `kind: s3` will work with any S3-compatible storage, such as AWS S3, Backbla
       keyformat: "{{ .PublishedParsed.UTC.Year }}/{{ .PublishedParsed.UTC.Month }}/{{ .PublishedParsed.UTC.Day }}"
 ```
 
-### Kafka
+#### Kafka
 
 `kind: kafka` will output to a Kafka (or compatible service, such as redpanda) topic:
 
