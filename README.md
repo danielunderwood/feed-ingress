@@ -4,11 +4,20 @@ An ingress for RSS, Atom, JSONFeed, and other news feeds that provides configura
 
 ## Running
 
+### Local Go
+
 ```shell
 $ nix-shell # Or local environment with go + docker-compose
 $ $EDITOR config.yaml
-$ docker-compose up -d
+$ docker-compose -f docker-compose.dependencies.yml up -d
 $ go run *.go
+```
+
+### Docker
+
+```shell
+$ docker-compose build
+$ docker-compose -f docker-compose.dependencies.yml -f docker-compose.yml up
 ```
 
 

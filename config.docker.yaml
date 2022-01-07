@@ -1,0 +1,10 @@
+outputs:
+  - kind: kafka
+    config:
+      broker: "redpanda-1:9092"
+      topic: feeds
+redis:
+  host: redis:6379
+feeds:
+  - https://techcrunch.com/feed/
+  - https://feeds.feedburner.com/TheHackersNews?format=xml
