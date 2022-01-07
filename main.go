@@ -131,7 +131,11 @@ func parseWriters(config Config) []Writer {
 func processFeed(feed Feed, redisClient *redisbloom.Client, writers []Writer) {
 	fp := gofeed.NewParser()
 	fmt.Println("Processing feed", feed)
-	parsed, _ := fp.ParseURL(string(feed))
+	parsed, err := fp.ParseURL(string(feed))
+	if err != nil {
+		fmt.Println("Unable to parse feed", feed, err)
+		return
+	}
 	for _, item := range parsed.Items {
 		// TODO This should probably be in a goroutine, but we need to use channels and such
 		go processItem(parsed, *item, redisClient, writers)
