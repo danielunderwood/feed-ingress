@@ -13,11 +13,19 @@ $ docker-compose -f docker-compose.dependencies.yml up -d
 $ go run *.go
 ```
 
-### Docker
+### Docker-Compose
 
 ```shell
 $ docker-compose build
 $ docker-compose -f docker-compose.dependencies.yml -f docker-compose.yml up
+```
+
+### Docker
+
+```shell
+# Set up dependencies (at least redisbloom)
+$ $EDITOR config.yaml
+$ docker run --name feed-ingress -v ./config.yaml:/app/config.yaml:ro ghcr.io/danielunderwood/feed-ingress
 ```
 
 
