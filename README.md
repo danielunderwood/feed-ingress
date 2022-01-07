@@ -2,6 +2,16 @@
 
 An ingress for RSS, Atom, JSONFeed, and other news feeds that provides configurable output to multiple sources for storage or processing.
 
+## Running
+
+```shell
+$ nix-shell # Or local environment with go + docker-compose
+$ $EDITOR config.yaml
+$ docker-compose up -d
+$ go run *.go
+```
+
+
 ## Outputs
 
 ### Local Files
