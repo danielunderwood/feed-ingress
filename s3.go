@@ -34,10 +34,16 @@ func (out S3Output) Write(feed *gofeed.Feed, item gofeed.Item, identifier string
 		Region:           aws.String(out.Region),
 		S3ForcePathStyle: aws.Bool(true),
 	}
-	newSession := session.New(s3Config)
+	newSession, err := session.NewSession(s3Config)
+	if err != nil {
+		return err
+	}
 	s3Client := s3.New(newSession)
 
 	data, err := json.Marshal(item)
+	if err != nil {
+		return err
+	}
 
 	// TODO This should probably go in initialization
 	pathTemplate, err := template.New(out.KeyFormat).Parse(out.KeyFormat)
