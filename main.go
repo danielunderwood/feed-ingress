@@ -52,7 +52,7 @@ func loadConfig() Config {
 	return config
 }
 
-const BLOOM_FILTER_NAME = "items-exist"
+const BLOOM_FILTER_KEY = "items-exist"
 
 func main() {
 	config := loadConfig()
@@ -63,7 +63,14 @@ func main() {
 	// fmt.Println("Parsing from", string(configYaml))
 	writers := parseWriters(config)
 
+	// We could probably just use regular keys in redis to track everything, but
+	// everyone loves bloom filters
 	redisClient := redisbloom.NewClient(config.Redis.Host, "nohelp", nil)
+	// We could reserve if we wanted to. Apparently BF.ADD will create the filter
+	// if it doesn't exist and the filter should expand its capacity as needed (though
+	// the docs don't seem to give the parameters for auto-creation and performance
+	// will degrade through expansions)
+	// redisClient.Reserve(BLOOM_FILTER_KEY, 0.0001, 1e9)
 
 	for _, writer := range writers {
 		fmt.Printf("%#v\n", writer)
@@ -72,9 +79,9 @@ func main() {
 	for {
 		// TODO Each one should be its own goroutine
 		for _, feed := range config.Feeds {
-			processFeed(feed, redisClient, writers)
+			go processFeed(feed, redisClient, writers)
 		}
-		time.Sleep(1 * time.Minute)
+		time.Sleep(15 * time.Minute)
 	}
 }
 
@@ -127,7 +134,7 @@ func processFeed(feed Feed, redisClient *redisbloom.Client, writers []Writer) {
 	parsed, _ := fp.ParseURL(string(feed))
 	for _, item := range parsed.Items {
 		// TODO This should probably be in a goroutine, but we need to use channels and such
-		processItem(parsed, *item, redisClient, writers)
+		go processItem(parsed, *item, redisClient, writers)
 	}
 }
 
@@ -136,11 +143,14 @@ func processItem(feed *gofeed.Feed, item gofeed.Item, redisClient *redisbloom.Cl
 	// We could also base64 it so it's reversible, but then the filenames may not be the same length
 	identifier := blake2b.Sum256([]byte(item.GUID))
 	identifierStr := fmt.Sprintf("%x", identifier)
-	if exists, _ := redisClient.Exists(BLOOM_FILTER_NAME, identifierStr); exists {
+
+	// Note that errors are ignored here. It's not the end of the world if we re-process items, though
+	// it might be worth doing something in the case of many errors
+	if exists, _ := redisClient.Exists(BLOOM_FILTER_KEY, identifierStr); exists {
 		fmt.Printf("Already processed %x\n", identifier)
 		return
 	} else {
-		redisClient.Add(BLOOM_FILTER_NAME, identifierStr)
+		redisClient.Add(BLOOM_FILTER_KEY, identifierStr)
 	}
 
 	for _, writer := range writers {
