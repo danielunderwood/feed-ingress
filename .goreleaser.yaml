@@ -1,4 +1,4 @@
-project_name: log2http
+project_name: feed-ingress
 builds:
   - env: [CGO_ENABLED=0]
     goos:
