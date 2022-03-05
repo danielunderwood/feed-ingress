@@ -1,0 +1,18 @@
+project_name: log2http
+builds:
+  - env: [CGO_ENABLED=0]
+    goos:
+      - linux
+      - windows
+      - darwin
+      - freebsd
+      - openbsd
+    goarch:
+      - amd64
+      - arm64
+      - arm
+    
+    goarm:
+      - 6
+      - 7
+universal_binaries:
