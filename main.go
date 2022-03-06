@@ -159,12 +159,20 @@ func processItem(feed *gofeed.Feed, item gofeed.Item, redisClient *redisbloom.Cl
 	// Hash the GUID to make a uniform format
 	// We could also base64 it so it's reversible, but then the filenames may not be the same length
 	identifier := blake2b.Sum256([]byte(item.GUID))
+	fmt.Printf("Item: %s - %s, GUID: %s\n", feed.Title, item.Title, item.GUID)
 	identifierStr := fmt.Sprintf("%x", identifier)
 
 	// Note that errors are ignored here. It's not the end of the world if we re-process items, though
 	// it might be worth doing something in the case of many errors
-	if exists, _ := redisClient.Exists(BLOOM_FILTER_KEY, identifierStr); exists {
+	if exists, err := redisClient.Exists(BLOOM_FILTER_KEY, identifierStr); exists {
 		fmt.Printf("Already processed %x\n", identifier)
+		return
+	} else if err != nil {
+		fmt.Printf("Redis error: %s\n", err)
+		// It could be debated whether or not you want to process an item here anyway
+		// This takes the assumption that if the error is transient, the next run of the feed will try
+		// to process the item again because the key isn't stored. If the connection has been restored
+		// at that point, the item will be processed and the key will be stored properly
 		return
 	} else {
 		redisClient.Add(BLOOM_FILTER_KEY, identifierStr)
