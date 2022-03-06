@@ -39,7 +39,16 @@ type Config struct {
 }
 
 func loadConfig() Config {
-	b, err := os.ReadFile("./config.yaml")
+	var configFile string
+	if len(os.Args) == 1 {
+		configFile = "./config.yaml"
+	} else if len(os.Args) == 2 {
+		configFile = os.Args[1]
+	} else {
+		fmt.Println("Usage: feed-ingress CONFIG_FILE")
+		os.Exit(1)
+	}
+	b, err := os.ReadFile(configFile)
 	if err != nil {
 		log.Panic("Could not read config file", err)
 	}
