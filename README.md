@@ -90,3 +90,15 @@ The `kind: s3` will work with any S3-compatible storage, such as AWS S3, Backbla
 ```
 
 The included `docker-compose.yml` will set up redpanda for testing.
+
+### Discord (Work in Progress)
+
+`kind: discord` will output to a Discord webhook:
+
+```yaml
+ - kind: discord
+   config:
+     url: https://discord.com/api/webhooks/.../...
+```
+
+This won't work as well as the other outputs for high-volume output, but should work for monitoring a handful of low-volume feeds.

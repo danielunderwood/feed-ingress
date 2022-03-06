@@ -116,8 +116,12 @@ func parseWriters(config Config) []Writer {
 			if err == nil {
 				writers = append(writers, writer)
 			}
+		case "discord":
+			fmt.Println("Parsing discord webhook output")
+			writer := NewDiscordWebhookOutput(output.Config["url"])
+			writers = append(writers, writer)
 		default:
-			log.Fatal("Could not parse kind", output.Kind)
+			log.Fatal("Could not parse kind: ", output.Kind)
 		}
 
 		if err != nil {
