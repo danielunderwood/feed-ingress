@@ -1,4 +1,4 @@
-module github.com/danielunderwood/feed-parser
+module github.com/danielunderwood/feed-ingress
 
 go 1.16
 
