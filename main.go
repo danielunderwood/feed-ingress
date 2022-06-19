@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -38,16 +39,7 @@ type Config struct {
 	Redis   RedisConfig
 }
 
-func loadConfig() Config {
-	var configFile string
-	if len(os.Args) == 1 {
-		configFile = "./config.yaml"
-	} else if len(os.Args) == 2 {
-		configFile = os.Args[1]
-	} else {
-		fmt.Println("Usage: feed-ingress CONFIG_FILE")
-		os.Exit(1)
-	}
+func loadConfig(configFile string) Config {
 	b, err := os.ReadFile(configFile)
 	if err != nil {
 		log.Panic("Could not read config file", err)
@@ -61,11 +53,40 @@ func loadConfig() Config {
 	return config
 }
 
+type ItemFilter func(gofeed.Item, gofeed.Feed) bool
+
 const BLOOM_FILTER_KEY = "items-exist"
 
 func main() {
-	config := loadConfig()
+	startTime := time.Now()
+	var newOnly bool
+	flag.BoolVar(&newOnly, "newOnly", false, "Only process items published after program start time. Default false")
+	flag.Usage = func() {
+		fmt.Println("Usage: feed-ingress [-newOnly] CONFIG_FILE")
+		flag.PrintDefaults()
+	}
+	flag.Parse()
+
+	var configFile string
+	if flag.NArg() == 0 {
+		configFile = "config.yaml"
+	} else if flag.NArg() == 1 {
+		configFile = flag.Arg(0)
+	} else {
+		flag.Usage()
+		os.Exit(1)
+	}
+
+	config := loadConfig(configFile)
 	log.Println("Config loaded:", config)
+
+	// Global filtering function that can be defined according to the config/CLI parameters
+	filterFunc := func(item gofeed.Item, _ gofeed.Feed) bool {
+		if newOnly {
+			return startTime.Before(*item.PublishedParsed)
+		}
+		return true
+	}
 
 	// It's a bit hacky, but it's easier to just do round-trip conversion to get
 	// everything converted cleanly
@@ -88,7 +109,7 @@ func main() {
 	for {
 		// TODO Each one should be its own goroutine
 		for _, feed := range config.Feeds {
-			go processFeed(feed, redisClient, writers)
+			go processFeed(feed, redisClient, writers, filterFunc)
 		}
 		time.Sleep(15 * time.Minute)
 	}
@@ -141,7 +162,7 @@ func parseWriters(config Config) []Writer {
 	return writers
 }
 
-func processFeed(feed Feed, redisClient *redisbloom.Client, writers []Writer) {
+func processFeed(feed Feed, redisClient *redisbloom.Client, writers []Writer, filterFunc ItemFilter) {
 	fp := gofeed.NewParser()
 	log.Println("Processing feed", feed)
 	parsed, err := fp.ParseURL(string(feed))
@@ -150,8 +171,10 @@ func processFeed(feed Feed, redisClient *redisbloom.Client, writers []Writer) {
 		return
 	}
 	for _, item := range parsed.Items {
-		// TODO This should probably be in a goroutine, but we need to use channels and such
-		go processItem(parsed, *item, redisClient, writers)
+		if filterFunc(*item, *parsed) {
+			// TODO This should probably be in a goroutine, but we need to use channels and such
+			go processItem(parsed, *item, redisClient, writers)
+		}
 	}
 }
 

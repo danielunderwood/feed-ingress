@@ -28,7 +28,7 @@
           pkgs = nixpkgsFor.${system};
         in
         {
-          log2http = pkgs.buildGoModule {
+          feed-ingress = pkgs.buildGoModule {
             pname = "feed-ingress";
             inherit version;
             # In 'nix develop', we don't need a copy of the source tree
@@ -52,7 +52,7 @@
       # The default package for 'nix build'. This makes sense if the
       # flake provides only one package or there is a clear "main"
       # package.
-      defaultPackage = forAllSystems (system: self.packages.${system}.log2http);
+      defaultPackage = forAllSystems (system: self.packages.${system}.feed-ingress);
 
       devShell = forAllSystems (system:
         let pkgs = nixpkgsFor.${system};
