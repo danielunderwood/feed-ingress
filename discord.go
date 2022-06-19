@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"time"
 
@@ -72,7 +73,7 @@ func (d *DiscordWebhook) ProcessMessages() {
 				break
 			}
 
-			fmt.Printf("Rate Limited: Delaying for %f seconds\n", delay.Seconds())
+			log.Printf("Rate Limited: Delaying for %f seconds\n", delay.Seconds())
 			time.Sleep(delay)
 		}
 	}
@@ -89,7 +90,7 @@ func (d *DiscordWebhook) Close() {
 func (d *DiscordWebhook) sendMessage(message DiscordMessage) time.Duration {
 	body, err := json.Marshal(message)
 	if err != nil {
-		fmt.Print("Failed to marshal JSON", err)
+		log.Print("Failed to marshal JSON", err)
 		return 0
 	}
 
@@ -100,20 +101,20 @@ func (d *DiscordWebhook) sendMessage(message DiscordMessage) time.Duration {
 	)
 
 	if err != nil {
-		fmt.Println("ERROR", err)
+		log.Println("ERROR", err)
 		return 0
 	}
 
 	body, _ = ioutil.ReadAll(resp.Body)
 	if resp.StatusCode != 204 {
-		fmt.Println("Request failed", resp.StatusCode, string(body))
+		log.Println("Request failed", resp.StatusCode, string(body))
 	}
 
 	if resp.StatusCode == 429 {
 		var content RateLimitResponse
 		err := json.Unmarshal(body, &content)
 		if err != nil {
-			fmt.Printf("ERROR: Could not parse delay time: %s. Defaulting to 10 seconds\n", err)
+			log.Printf("ERROR: Could not parse delay time: %s. Defaulting to 10 seconds\n", err)
 			return 10 * time.Second
 		}
 		// The API docs say that this field is in seconds, but values that I have

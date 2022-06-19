@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"log"
 	"text/template"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -63,10 +64,10 @@ func (out S3Output) Write(feed *gofeed.Feed, item gofeed.Item, identifier string
 		Key:    &key,
 	})
 	if err != nil {
-		fmt.Printf("Failed to upload object %s/%s, %s\n", *bucket, key, err.Error())
+		log.Printf("Failed to upload object %s/%s, %s\n", *bucket, key, err.Error())
 		return err
 	} else {
-		fmt.Printf("Successfully uploaded key %s\n", key)
+		log.Printf("Successfully uploaded key %s\n", key)
 	}
 	return nil
 }

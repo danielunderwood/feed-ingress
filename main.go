@@ -65,11 +65,11 @@ const BLOOM_FILTER_KEY = "items-exist"
 
 func main() {
 	config := loadConfig()
-	fmt.Println("Config loaded:", config)
+	log.Println("Config loaded:", config)
 
 	// It's a bit hacky, but it's easier to just do round-trip conversion to get
 	// everything converted cleanly
-	// fmt.Println("Parsing from", string(configYaml))
+	// log.Println("Parsing from", string(configYaml))
 	writers := parseWriters(config)
 
 	// We could probably just use regular keys in redis to track everything, but
@@ -82,7 +82,7 @@ func main() {
 	// redisClient.Reserve(BLOOM_FILTER_KEY, 0.0001, 1e9)
 
 	for _, writer := range writers {
-		fmt.Printf("%#v\n", writer)
+		log.Printf("%#v\n", writer)
 	}
 
 	for {
@@ -105,28 +105,28 @@ func parseWriters(config Config) []Writer {
 
 		switch strings.ToLower(output.Kind) {
 		case "s3":
-			fmt.Println("Parsing s3 output")
+			log.Println("Parsing s3 output")
 			var writer S3Output
 			err = yaml.Unmarshal(configYaml, &writer)
 			if err == nil {
 				writers = append(writers, writer)
 			}
 		case "file":
-			fmt.Println("Parsing file output")
+			log.Println("Parsing file output")
 			var writer FileOutput
 			err = yaml.Unmarshal(configYaml, &writer)
 			if err == nil {
 				writers = append(writers, writer)
 			}
 		case "kafka":
-			fmt.Println("Parsing kafka output")
+			log.Println("Parsing kafka output")
 			var writer KafkaOutput
 			err = yaml.Unmarshal(configYaml, &writer)
 			if err == nil {
 				writers = append(writers, writer)
 			}
 		case "discord":
-			fmt.Println("Parsing discord webhook output")
+			log.Println("Parsing discord webhook output")
 			writer := NewDiscordWebhookOutput(output.Config["url"])
 			writers = append(writers, writer)
 		default:
@@ -137,16 +137,16 @@ func parseWriters(config Config) []Writer {
 			log.Fatal("Failed to provider output", output)
 		}
 	}
-	fmt.Println(writers)
+	log.Println("Parsed writers", writers)
 	return writers
 }
 
 func processFeed(feed Feed, redisClient *redisbloom.Client, writers []Writer) {
 	fp := gofeed.NewParser()
-	fmt.Println("Processing feed", feed)
+	log.Println("Processing feed", feed)
 	parsed, err := fp.ParseURL(string(feed))
 	if err != nil {
-		fmt.Println("Unable to parse feed", feed, err)
+		log.Println("Unable to parse feed", feed, err)
 		return
 	}
 	for _, item := range parsed.Items {
@@ -159,16 +159,16 @@ func processItem(feed *gofeed.Feed, item gofeed.Item, redisClient *redisbloom.Cl
 	// Hash the GUID to make a uniform format
 	// We could also base64 it so it's reversible, but then the filenames may not be the same length
 	identifier := blake2b.Sum256([]byte(item.GUID))
-	fmt.Printf("Item: %s - %s, GUID: %s\n", feed.Title, item.Title, item.GUID)
+	log.Printf("Item: %s - %s, GUID: %s\n", feed.Title, item.Title, item.GUID)
 	identifierStr := fmt.Sprintf("%x", identifier)
 
 	// Note that errors are ignored here. It's not the end of the world if we re-process items, though
 	// it might be worth doing something in the case of many errors
 	if exists, err := redisClient.Exists(BLOOM_FILTER_KEY, identifierStr); exists {
-		fmt.Printf("Already processed %x\n", identifier)
+		log.Printf("Already processed %x\n", identifier)
 		return
 	} else if err != nil {
-		fmt.Printf("Redis error: %s\n", err)
+		log.Printf("Redis error: %s\n", err)
 		// It could be debated whether or not you want to process an item here anyway
 		// This takes the assumption that if the error is transient, the next run of the feed will try
 		// to process the item again because the key isn't stored. If the connection has been restored
@@ -183,9 +183,9 @@ func processItem(feed *gofeed.Feed, item gofeed.Item, redisClient *redisbloom.Cl
 		// (and potentially feeds/items, but we shouldn't be modifying those)
 		// Really it would be safer to have workers and channels
 		go func(writer Writer) {
-			fmt.Printf("Writing with %T\n", writer)
+			log.Printf("Writing with %T\n", writer)
 			if err := writer.Write(feed, item, identifierStr); err != nil {
-				fmt.Println("Error writing with", writer, err)
+				log.Println("Error writing with", writer, err)
 			}
 		}(writer)
 	}
