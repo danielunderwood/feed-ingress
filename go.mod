@@ -4,7 +4,7 @@ go 1.16
 
 require (
 	github.com/RedisBloom/redisbloom-go v1.0.0
-	github.com/aws/aws-sdk-go v1.44.239
+	github.com/aws/aws-sdk-go v1.44.244
 	github.com/mmcdole/gofeed v1.2.1
 	github.com/segmentio/kafka-go v0.4.39
 	golang.org/x/crypto v0.8.0
