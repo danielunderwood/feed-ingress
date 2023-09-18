@@ -1,6 +1,6 @@
 name: Go
 
-on: [push, pull_request]
+on: [push]
 
 jobs:
   CodeQL:
@@ -39,7 +39,7 @@ jobs:
         version: "2021.1.1"
     - run: go vet ./...
   test:
-    name: "Check code and dependencies"
+    name: "Test Code"
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v1
@@ -48,7 +48,7 @@ jobs:
     - uses: actions/setup-go@v4
     - run: go test
   build:
-    name: "Check code and dependencies"
+    name: "Build Code"
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v1
