@@ -1,0 +1,23 @@
+outputs:
+  - kind: s3
+    config:
+      endpoint: https://s3.example.com
+      region: test-region
+      accesskeyid: test-key
+      accesssecret: test-secret
+      bucket: test-bucket
+      keyformat: "{{ .PublishedParsed.UTC.Year }}/{{ .PublishedParsed.UTC.Month }}/{{ .PublishedParsed.UTC.Day }}"
+  - kind: file
+    config:
+      pathformat: "./data/{{ .PublishedParsed.UTC.Year }}/{{ .PublishedParsed.UTC.Month }}/{{ .PublishedParsed.UTC.Day }}"
+  - kind: kafka
+    config:
+      broker: "127.0.0.1:9092"
+      topic: feeds
+  - kind: discord
+    config:
+      url: "https://discord.example.com/webhook"
+redis:
+  host: 127.0.0.1:6379
+feeds:
+  - example.com/feed.xml
