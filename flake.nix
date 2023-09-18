@@ -2,7 +2,7 @@
   description = "Simple configurable RSS ingress";
 
   # Nixpkgs / NixOS version to use.
-  inputs.nixpkgs.url = "nixpkgs/nixos-21.11";
+  inputs.nixpkgs.url = "nixpkgs/nixos-23.05";
 
   outputs = { self, nixpkgs }:
     let
@@ -61,7 +61,6 @@
             docker-compose
             go
             gopls
-            goimports
             go-tools
             kcat
           ];
