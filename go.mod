@@ -7,6 +7,6 @@ require (
 	github.com/aws/aws-sdk-go v1.50.10
 	github.com/mmcdole/gofeed v1.2.1
 	github.com/segmentio/kafka-go v0.4.47
-	golang.org/x/crypto v0.18.0
+	golang.org/x/crypto v0.19.0
 	gopkg.in/yaml.v2 v2.4.0
 )
