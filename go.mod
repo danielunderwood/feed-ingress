@@ -9,7 +9,7 @@ require (
 	github.com/aws/aws-sdk-go v1.55.7
 	github.com/mmcdole/gofeed v1.3.0
 	github.com/segmentio/kafka-go v0.4.47
-	golang.org/x/crypto v0.34.0
+	golang.org/x/crypto v0.37.0
 	gopkg.in/yaml.v2 v2.4.0
 )
 
@@ -25,6 +25,6 @@ require (
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/pierrec/lz4/v4 v4.1.15 // indirect
 	golang.org/x/net v0.25.0 // indirect
-	golang.org/x/sys v0.30.0 // indirect
-	golang.org/x/text v0.22.0 // indirect
+	golang.org/x/sys v0.32.0 // indirect
+	golang.org/x/text v0.24.0 // indirect
 )
